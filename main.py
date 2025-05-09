@@ -19,6 +19,7 @@ ROLE_ID = 1026653021570089118
 VOUCH_CHANNEL_ID = 1026642017238929499
 WELCOME_CHANNELS = [1026641924507050065, 1026642017238929499, 1093333229043454006]
 REDEEM_POST_CHANNEL = 1369754722973646908
+ORDER_NOTIFICATION_CHANNEL = None
 
 valid_keys = {
     "Insta500_z83R4TvnAX38XavgjfVa": True,
@@ -184,13 +185,24 @@ class RedeemModal(discord.ui.Modal):
                         f"📋 **Order ID: `{data['order']}`**\n"
                         "⚠️ **IMPORTANT:** Please save this Order ID!\n"
                         "You will need it to request refills in the future.\n"
-                        "Without this ID, you won't be able to request refills for your order.\n\n"
-                        "To request a refill later:\n"
-                        "1. Click the '🔄 Request Refill' button\n"
-                        "2. Enter this Order ID\n"
-                        "3. Save the Refill ID you receive"
+                        "Without this ID, you won't be able to request refills for your order."
                     )
                     await interaction.response.send_message(order_message, ephemeral=True)
+
+                    # Send notification to order channel if set
+                    if ORDER_NOTIFICATION_CHANNEL:
+                        service_name = match.rstrip("_")  # Remove trailing underscore for display
+                        notification = (
+                            "🛍️ **New Order Placed!**\n"
+                            f"Key: `{key}`\n"
+                            f"Service: `{service_name}`\n"
+                            f"Link: {link}\n"
+                            f"Order ID: `{data['order']}`"
+                        )
+                        try:
+                            await ORDER_NOTIFICATION_CHANNEL.send(notification)
+                        except Exception as e:
+                            print(f"Failed to send order notification: {e}")
 
                     role = interaction.guild.get_role(ROLE_ID)
                     if role:
@@ -221,6 +233,16 @@ async def postredeem(interaction: discord.Interaction):
         await interaction.response.send_message("✅ Platform buttons posted.", ephemeral=True)
     else:
         await interaction.response.send_message("❌ Channel not found.", ephemeral=True)
+
+@bot.tree.command(name="setorder", description="Set the channel for order notifications")
+@app_commands.describe(channel="The channel to send order notifications to")
+async def setorder(interaction: discord.Interaction, channel: discord.TextChannel):
+    global ORDER_NOTIFICATION_CHANNEL
+    ORDER_NOTIFICATION_CHANNEL = channel
+    await interaction.response.send_message(
+        f"✅ Order notifications will now be sent to {channel.mention}",
+        ephemeral=True
+    )
 
 @bot.tree.command(name="addkey", description="Add multiple redeemable keys (space-separated).")
 @app_commands.describe(keys="The new keys to add (space-separated)")
