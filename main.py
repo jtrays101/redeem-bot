@@ -75,7 +75,13 @@ class RefillModal(discord.ui.Modal, title="🔄 Request Refill"):
             async with session.post("https://justanotherpanel.com/api/v2", data=payload) as response:
                 data = await response.json()
                 if "refill" in data:
-                    await interaction.response.send_message(f"✅ Refill request submitted successfully! Refill ID: `{data['refill']}`", ephemeral=True)
+                    await interaction.response.send_message(
+                        f"✅ Refill request submitted successfully!\n\n"
+                        f"📋 **Refill ID: `{data['refill']}`**\n"
+                        "⚠️ **IMPORTANT:** Save this Refill ID!\n"
+                        "You'll need it to check the status of your refill request.",
+                        ephemeral=True
+                    )
                 else:
                     await interaction.response.send_message("❌ Failed to request refill. Please check your order ID.", ephemeral=True)
 
@@ -95,7 +101,12 @@ class RefillStatusModal(discord.ui.Modal, title="📊 Check Refill Status"):
             async with session.post("https://justanotherpanel.com/api/v2", data=payload) as response:
                 data = await response.json()
                 if "status" in data:
-                    await interaction.response.send_message(f"📊 Refill Status: `{data['status']}`", ephemeral=True)
+                    await interaction.response.send_message(
+                        f"📊 **Refill Status Update**\n"
+                        f"Status: `{data['status']}`\n"
+                        f"Refill ID: `{refill}`",
+                        ephemeral=True
+                    )
                 else:
                     await interaction.response.send_message("❌ Failed to get refill status. Please check your refill ID.", ephemeral=True)
 
@@ -168,7 +179,18 @@ class RedeemModal(discord.ui.Modal):
                 data = await response.json()
                 if "order" in data:
                     valid_keys.pop(key)
-                    await interaction.response.send_message(f"✅ Order placed successfully! Order ID: `{data['order']}`", ephemeral=True)
+                    order_message = (
+                        "✅ Order placed successfully!\n\n"
+                        f"📋 **Order ID: `{data['order']}`**\n"
+                        "⚠️ **IMPORTANT:** Please save this Order ID!\n"
+                        "You will need it to request refills in the future.\n"
+                        "Without this ID, you won't be able to request refills for your order.\n\n"
+                        "To request a refill later:\n"
+                        "1. Click the '🔄 Request Refill' button\n"
+                        "2. Enter this Order ID\n"
+                        "3. Save the Refill ID you receive"
+                    )
+                    await interaction.response.send_message(order_message, ephemeral=True)
 
                     role = interaction.guild.get_role(ROLE_ID)
                     if role:
