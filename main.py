@@ -59,6 +59,46 @@ class ServiceSelect(discord.ui.Select):
         service_name = self.values[0]
         await interaction.response.send_modal(RedeemModal(f"{self.platform} - {service_name}"))
 
+class RefillModal(discord.ui.Modal, title="🔄 Request Refill"):
+    order_id = discord.ui.TextInput(label="Order ID", placeholder="Enter your order ID", required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        order = self.order_id.value.strip()
+        
+        payload = {
+            "key": PANEL_API_KEY,
+            "action": "refill",
+            "order": order
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post("https://justanotherpanel.com/api/v2", data=payload) as response:
+                data = await response.json()
+                if "refill" in data:
+                    await interaction.response.send_message(f"✅ Refill request submitted successfully! Refill ID: `{data['refill']}`", ephemeral=True)
+                else:
+                    await interaction.response.send_message("❌ Failed to request refill. Please check your order ID.", ephemeral=True)
+
+class RefillStatusModal(discord.ui.Modal, title="📊 Check Refill Status"):
+    refill_id = discord.ui.TextInput(label="Refill ID", placeholder="Enter your refill ID", required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        refill = self.refill_id.value.strip()
+        
+        payload = {
+            "key": PANEL_API_KEY,
+            "action": "refill_status",
+            "refill": refill
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post("https://justanotherpanel.com/api/v2", data=payload) as response:
+                data = await response.json()
+                if "status" in data:
+                    await interaction.response.send_message(f"📊 Refill Status: `{data['status']}`", ephemeral=True)
+                else:
+                    await interaction.response.send_message("❌ Failed to get refill status. Please check your refill ID.", ephemeral=True)
+
 class PlatformView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -74,6 +114,14 @@ class PlatformView(discord.ui.View):
         view = discord.ui.View()
         view.add_item(ServiceSelect("TikTok"))
         await interaction.response.send_message("Select TikTok Service:", view=view, ephemeral=True)
+
+    @discord.ui.button(label="🔄 Request Refill", style=discord.ButtonStyle.secondary)
+    async def refill_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(RefillModal())
+
+    @discord.ui.button(label="📊 Refill Status", style=discord.ButtonStyle.secondary)
+    async def refill_status_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(RefillStatusModal())
 
 class RedeemModal(discord.ui.Modal):
     def __init__(self, title):
